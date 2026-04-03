@@ -54,3 +54,16 @@ station_data.forEach((st) => {
         .addTo(map);
 })
 
+//////////
+// CREATE MAP HEADER
+//////////
+
+const header = document.createElement('div');
+header.className = 'header';
+header.innerHTML = `
+    <h1>Link Light Rail Stations</h1>
+    <p class="description">This map shows the locations of all current and proposed Link Light Rail stations.</p>
+    <p class="call-to-action">Click the markers to see the station names</p>
+`;
+
+document.body.appendChild(header);
