@@ -28,7 +28,7 @@ const mapOptions = {
         theme: "monochrome"
         }
     },
-}
+};
 
 const map = new mapboxgl.Map(mapOptions);
 
@@ -37,22 +37,50 @@ const map = new mapboxgl.Map(mapOptions);
 // CREATE STATION MARKERS
 /////////
 
-var station_data = JSON.parse(data);
+// const stations = JSON.parse(station_data);
 
-station_data.forEach((st) => {
-    const marker = new mapboxgl.Marker({
-        // TODO: add colors by station open status
-        //color: programColors[studentData.program] || '#999999'
+// create color mapping for station statuses
+const statusColors = {
+    'Existing / Under Construction': '#2E7D32',
+    'Future': '#1976D2'
+};
 
-        color: "#F43433"
-    })
-        .setLngLat(st.coordinates)
+// load JSON file with station locations, names, and statuses
+fetch('station_data.json')
+  .then(res => res.json())
+  .then(station_data => {
+    station_data.forEach((station_obj) => {
+      const marker = new mapboxgl.Marker({
+        color: statusColors[station_obj.STATUS] || '#999999'
+      })
+        .setLngLat([station_obj.longitude, station_obj.latitude])
         .setPopup(
-            new mapboxgl.Popup({ offset: 25 })
-                .setText(`${st.STATION}`)
+          new mapboxgl.Popup({ offset: 25 })
+            .setText(`${station_obj.STATION}`)
         )
         .addTo(map);
-})
+    });
+  })
+
+
+//////////
+// CREATE MAP LEGEND
+//////////
+const legend = document.createElement('div');
+legend.className = 'legend';
+legend.innerHTML = '<h4>Station status</h4>';
+
+Object.entries(statusColors).forEach(([station, color]) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `
+        <span class="legend-circle" style="background-color: ${color}"></span>
+        <span class="legend-label">${station}</span>
+    `;
+    legend.appendChild(item);
+});
+
+document.body.appendChild(legend);
 
 //////////
 // CREATE MAP HEADER
