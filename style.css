@@ -9,8 +9,8 @@ body, html {
 }
 
 .mapboxgl-popup-content{
-    font-family: 'Arial', sans-serif;
-    font-size: 14px;
+    font-family: 'Helvetica', sans-serif;
+    font-size: 12px;
 }
 
 #legend {
