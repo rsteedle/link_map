@@ -127,7 +127,7 @@ map.addInteraction('station_markers_click_interaction', {
 
         new mapboxgl.Popup()
             .setLngLat(coordinates)
-            .setHTML(`<strong>${description}</strong><br>Status: ${status}`)
+            .setHTML(`<strong>${description}</strong> <br> Status: ${status}`)
             .addTo(map);
     }
 });
@@ -153,6 +153,9 @@ map.addInteraction('station_markers_mouseleave_interaction', {
 
 
 // // create station status legend
+// deleted legend for now - added status to station popup instead 
+
+
 // const legend = document.getElementById('legend');
 
 
