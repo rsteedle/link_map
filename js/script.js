@@ -46,7 +46,7 @@ const statusColors = {
 };
 
 // load JSON file with station locations, names, and statuses
-fetch('station_data.json')
+fetch('data/station_data.json')
   .then(res => res.json())
   .then(station_data => {
     station_data.forEach((station_obj) => {
