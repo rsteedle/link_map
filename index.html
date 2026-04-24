@@ -12,7 +12,8 @@
   <body>
     <div id="map-container"></div>
 
-    <div id="tooltip" class="tooltip"></div>
+    <div class="map-overlay" id="legend"></div>
+
 
     <!-- Controls Container -->
     <div class="controls-container">
@@ -22,16 +23,13 @@
         <div class="panel-header">Layer Visibility</div>
         <label class="toggle-item">
             <input type="checkbox" id="station-toggle" checked>
-            <span>Station Markers</span>
+            <span>Link stations</span>
         </label>
         <label class="toggle-item">
             <input type="checkbox" id="line-toggle" checked>
-            <span>Link Lines</span>
+            <span>Link lines</span>
         </label>
     </div>
-
-
-
 
 
     <script src="data/station_data.json"></script>

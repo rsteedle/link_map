@@ -37,32 +37,7 @@ const map = new mapboxgl.Map(mapOptions);
 
 map.on('load', () => {
 
-/////////
-// CREATE STATION MARKERS
-/////////
-
-// const stations = JSON.parse(station_data);
-
-// load JSON file with station locations, names, and statuses
-// fetch('data/station_data.json')
-//   .then(res => res.json())
-//   .then(station_data => {
-//     station_data.forEach((station_obj) => {
-//       const marker = new mapboxgl.Marker({
-//         color: statusColors[station_obj.STATUS] || '#999999'
-//       })
-//         .setLngLat([station_obj.longitude, station_obj.latitude])
-//         .setPopup(
-//           new mapboxgl.Popup({ offset: 25 })
-//             .setText(`${station_obj.STATION}`)
-//         )
-//         .addTo(map);
-//     });
-//   })
-
-/////////
-// ADD LINK STATIONS LAYER
-/////////
+// Add station markers layer
 
 map.addSource('link_stations', {
         type: 'geojson',
@@ -70,7 +45,7 @@ map.addSource('link_stations', {
 })
 
 map.addLayer({
-        id: 'station-markers',
+        id: 'station_markers',
         type: 'circle',
         source: 'link_stations',
         layout: {
@@ -89,10 +64,7 @@ map.addLayer({
         }
     });
 
-
-/////////
-// ADD LINK LINES LAYER
-/////////
+// Add Link lines layer
 
 map.addSource('link_routes', {
         type: 'geojson',
@@ -131,10 +103,11 @@ map.addLayer({
     });
 
 
-// Layer toggle checkboxes
+// Add checkboxes to toggle which layers are visible
+
 document.getElementById('station-toggle').addEventListener('change', (e) => {
     const visibility = e.target.checked ? 'visible' : 'none';
-    map.setLayoutProperty('station-markers', 'visibility', visibility);
+    map.setLayoutProperty('station_markers', 'visibility', visibility);
 });
 
 document.getElementById('line-toggle').addEventListener('change', (e) => {
@@ -142,26 +115,60 @@ document.getElementById('line-toggle').addEventListener('change', (e) => {
     map.setLayoutProperty('link_routes_line', 'visibility', visibility);
 });
 
+// Add popup with station name when station marker is clicked
+map.addInteraction('station_markers_click_interaction', {
+    type: 'click',
+    target: { layerId: 'station_markers' },
+    handler: (e) => {
+        // Copy coordinates array.
+        const coordinates = e.feature.geometry.coordinates.slice();
+        const description = e.feature.properties.STATION;
+        const status = e.feature.properties.STATUS;
 
-
-//////////
-// CREATE MAP LEGEND
-//////////
-const legend = document.createElement('div');
-legend.className = 'legend';
-legend.innerHTML = '<h4>Station status</h4>';
-
-Object.entries(statusColors).forEach(([station, color]) => {
-    const item = document.createElement('div');
-    item.className = 'legend-item';
-    item.innerHTML = `
-        <span class="legend-circle" style="background-color: ${color}"></span>
-        <span class="legend-label">${station}</span>
-    `;
-    legend.appendChild(item);
+        new mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(`<strong>${description}</strong><br>Status: ${status}`)
+            .addTo(map);
+    }
 });
 
-document.body.appendChild(legend);
+// Change the cursor to a pointer when the mouse is over a POI.
+map.addInteraction('station_markers_mouseenter_interaction', {
+    type: 'mouseenter',
+    target: { layerId: 'station_markers' },
+    handler: () => {
+        map.getCanvas().style.cursor = 'pointer';
+    }
+});
+
+// Change the cursor back to a pointer when it stops hovering over a POI.
+map.addInteraction('station_markers_mouseleave_interaction', {
+    type: 'mouseleave',
+    target: { layerId: 'station_markers' },
+    handler: () => {
+        map.getCanvas().style.cursor = '';
+    }
+
+});
+
+
+// // create station status legend
+// const legend = document.getElementById('legend');
+
+
+// const color = map.getPaintProperty('station_markers', 'circle-color');
+// const item = document.createElement('div');
+// const key = document.createElement('span');
+// key.className = 'legend-key';
+// key.style.backgroundColor = color;
+
+// const value = document.createElement('span');
+// value.innerHTML = `${layer}`;
+// item.appendChild(key);
+// item.appendChild(value);
+// legend.appendChild(item);
+
+
 
 //////////
 // CREATE MAP HEADER
@@ -171,8 +178,7 @@ const header = document.createElement('div');
 header.className = 'header';
 header.innerHTML = `
     <h1>Link Light Rail Stations</h1>
-    <p class="description">This map shows the locations of all current and proposed Link Light Rail stations.</p>
-    <p class="call-to-action">Click the markers to see the station names</p>
+    <p class="call-to-action">Click the markers to see each station's name and opening status.</p>
 `;
 
 document.body.appendChild(header);
