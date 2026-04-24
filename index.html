@@ -10,9 +10,34 @@
   </head>
 
   <body>
-    <div id="map-container"> </div>
-    <script src="station_data.json"></script>
-    <script src="script.js"> </script>
+    <div id="map-container"></div>
+
+    <div class="map-overlay" id="legend"></div>
+
+
+    <!-- Controls Container -->
+    <div class="controls-container">
+
+    <!-- Layer Visibility -->
+    <div class="control-panel">
+        <div class="panel-header">Layer Visibility</div>
+        <label class="toggle-item">
+            <input type="checkbox" id="station-toggle" checked>
+            <span>Link stations</span>
+        </label>
+        <label class="toggle-item">
+            <input type="checkbox" id="line-toggle" checked>
+            <span>Link lines</span>
+        </label>
+    </div>
+
+
+    <script src="data/station_data.json"></script>
+    <script src="js/script.js"> </script>
+
+
+
+
   </body>
 
 
