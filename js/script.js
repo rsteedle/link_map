@@ -5,13 +5,13 @@ mapboxgl.accessToken = 'pk.eyJ1IjoicnVieXN0ZWVkbGUiLCJhIjoiY21uaTJ1YnBkMDk0NDJxb
 // CREATE MAP
 ////////
 
-// set constant for center of map
-const seattle_ll = [-122.33935, 47.60774];
-
 // declare map options
 const mapOptions = {
     zoom: 10, 
-    center: seattle_ll, 
+    maxZoom: 11,
+    minZoom: 8,
+    center: [-122.33935, 47.60774], // set default center to downtown Seattle
+    maxBounds: [[ -122.624774, 47.127863],[-121.839252, 48.094376]],
     container: 'map-container',
     style: 'mapbox://styles/mapbox/standard',
     terrain: null,
@@ -37,11 +37,14 @@ const map = new mapboxgl.Map(mapOptions);
 
 map.on('load', () => {
 
+// Set default year for data
+const default_year = 2009;
+
 // Add station markers layer
 
 map.addSource('link_stations', {
         type: 'geojson',
-        data: './data/station_data.geojson'
+        data: './data/link_stations.geojson'
 })
 
 map.addLayer({
@@ -52,23 +55,20 @@ map.addLayer({
             'visibility': 'visible'
         },
         paint: {
-            'circle-radius': 6,
-            'circle-color': [
-                'match',
-                ['get', 'STATUS'],
-                'Existing / Under Construction', '#2E7D32', // green
-                'Future', '#1976D2', // blue
-                '#999999' // gray fallback
-            ],
+            'circle-radius': 5,
+            'circle-color': '#0e440a',
             'circle-opacity': 0.8
         }
     });
+
+
+map.setFilter('station_markers', ['<=', ['number', ['get', 'open_year']], default_year]);
 
 // Add Link lines layer
 
 map.addSource('link_routes', {
         type: 'geojson',
-        data: './data/link_line_data.geojson'
+        data: './data/link_lines.geojson'
     });
 
 map.addLayer({
@@ -78,41 +78,70 @@ map.addLayer({
         paint: {
             'line-color': [
                 'match',
-                ['get', 'DESCRIPTIO'],
-                'Central Link', '#223b53',      // dark blue
-                'University Link', '#223b53', 
-
-                'Airport Link', '#223b53',  // red
-                'Tacoma Link', '#3bb2d0',     // teal
-                'North Link', '#223b53', // diff green
-                'East Link', '#56b881', // green 
-                'Angle Lake', '#223b53', // maroon
-                'Lynnwood Link', '#223b53', // light green
-                'Ballard / West Seattle', '#d5ba30', // yellow
-                '#cccccc'    // gray fallback
-            ],
-            'line-width': 5,
-            'line-opacity': [
-                'match',
-                ['get', 'STATUS'],
-                'Existing / Under Construction', 1,
-                'Future', 0.7,
-                0.5 // default opacity
-            ]
+                ['get', 'line_number'],
+                1, '#5b9452',
+                2, '#83dd73',
+                    '#000000'],
+            'line-width': 4
         }
     });
 
+map.setFilter('link_routes_line', ['<=', ['number', ['get', 'open_year']], default_year]);
 
-// Add checkboxes to toggle which layers are visible
 
-document.getElementById('station-toggle').addEventListener('change', (e) => {
-    const visibility = e.target.checked ? 'visible' : 'none';
-    map.setLayoutProperty('station_markers', 'visibility', visibility);
-});
+// Add Census tracts layer
 
-document.getElementById('line-toggle').addEventListener('change', (e) => {
-    const visibility = e.target.checked ? 'visible' : 'none';
-    map.setLayoutProperty('link_routes_line', 'visibility', visibility);
+map.addSource('census_tracts', {
+        type: 'geojson',
+        data: './data/tract_income.geojson'
+    });
+
+// function loadDataForYear(year) {
+//     const style = map.getStyle();
+//     style.layers.find(({ id }) => id === "emissions").paint['fill-color']['property'] = 'total_' + year;
+//     map.setStyle(style);
+// }
+
+map.addLayer({
+        id: 'census_tracts_fill',
+        type: 'fill',
+        source: 'census_tracts',
+        layout: {
+            'visibility': 'visible'
+        },
+        paint: {
+            'fill-color': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'med_income'],
+                    0,
+                    '#E9ECF7',
+                    50000,
+                    '#B2C6ED',
+                    100000,
+                    '#81A9D6',
+                    150000,
+                    '#4C7A9F',
+                    200000,
+                    '#496781'
+                ],
+                'fill-opacity': 0.4
+        },
+        slot: 'middle' // middle slot in Mapbox Standard style
+    });
+
+
+
+
+// Add year slider interactivity 
+document.getElementById('slider').addEventListener('input', (event) => {
+  const year = parseInt(event.target.value);
+  // update the map
+  map.setFilter('link_routes_line', ['<=', ['number', ['get', 'open_year']], year]);
+  map.setFilter('station_markers', ['<=', ['number', ['get', 'open_year']], year]);
+
+  // update text in the UI
+  document.getElementById('display_year').innerText = year;
 });
 
 // Add popup with station name when station marker is clicked
@@ -122,12 +151,11 @@ map.addInteraction('station_markers_click_interaction', {
     handler: (e) => {
         // Copy coordinates array.
         const coordinates = e.feature.geometry.coordinates.slice();
-        const description = e.feature.properties.STATION;
-        const status = e.feature.properties.STATUS;
+        const description = e.feature.properties.station;
 
         new mapboxgl.Popup()
             .setLngLat(coordinates)
-            .setHTML(`<strong>${description}</strong> <br> Status: ${status}`)
+            .setHTML(`<strong>${description}</strong>`)
             .addTo(map);
     }
 });
@@ -151,6 +179,7 @@ map.addInteraction('station_markers_mouseleave_interaction', {
 
 });
 
+// map.scrollZoom.disable();
 
 // // create station status legend
 // deleted legend for now - added status to station popup instead 

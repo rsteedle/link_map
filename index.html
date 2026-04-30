@@ -12,33 +12,27 @@
   <body>
     <div id="map-container"></div>
 
-    <div class="map-overlay" id="legend"></div>
-
-
     <!-- Controls Container -->
     <div class="controls-container">
-
-    <!-- Layer Visibility -->
-    <div class="control-panel">
-        <div class="panel-header">Layer Visibility</div>
-        <label class="toggle-item">
-            <input type="checkbox" id="station-toggle" checked>
-            <span>Link stations</span>
-        </label>
-        <label class="toggle-item">
-            <input type="checkbox" id="line-toggle" checked>
-            <span>Link lines</span>
-        </label>
+    
+      <!-- Time slider -->
+      <div class="control-panel" id="sliderbar">
+        <h2>Year: <label id="display_year">2009</label></h2>
+        <input
+          id="slider"
+          class="row"
+          type="range"
+          min="2009"
+          max="2026"
+          step="1"
+          value="2009"
+        />
+      </div>
     </div>
 
-
-    <script src="data/station_data.json"></script>
-    <script src="js/script.js"> </script>
-
-
-
+  <script src="data/station_data.json"></script>
+  <script src="js/script.js"> </script>
 
   </body>
-
 
 </html>
