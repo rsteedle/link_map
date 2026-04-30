@@ -6,8 +6,7 @@ library(tidyverse)
 library(sf)
 
 # Set directories
-proj_dir <- "/Users/rubysteedle/documents/github/link_map/"
-
+proj_dir <- here::here()
 
 ###
 # Census data median income layer
@@ -16,7 +15,7 @@ proj_dir <- "/Users/rubysteedle/documents/github/link_map/"
 # Load census data - median income by census tract in select counties Washington state for 2010, 2015, 2020
 
 # 2010 data
-raw_2010 <- read.csv(paste0(proj_dir, "data/acs_2010.csv"))
+raw_2010 <- read.csv(file.path(proj_dir, "data/acs_2010.csv"))
 
 acs_2010 <- raw_2010 %>%
   rename(geo_id = GEO_ID,
@@ -27,7 +26,7 @@ acs_2010 <- raw_2010 %>%
   filter(!is.na(med_income))
 
 # 2015
-raw_2015 <- read.csv(paste0(proj_dir, "data/acs_2015.csv"))
+raw_2015 <- read.csv(file.path(proj_dir, "data/acs_2015.csv"))
 
 acs_2015 <- raw_2015 %>%
   rename(geo_id = GEO_ID,
@@ -38,7 +37,7 @@ acs_2015 <- raw_2015 %>%
   filter(!is.na(med_income))
 
 # 2020
-raw_2020 <- read.csv(paste0(proj_dir, "data/acs_2020.csv"))
+raw_2020 <- read.csv(file.path(proj_dir, "data/acs_2020.csv"))
 
 acs_2020 <- raw_2020 %>%
   rename(geo_id = GEO_ID,
@@ -52,11 +51,11 @@ acs_2020 <- raw_2020 %>%
 acs_income <- bind_rows(acs_2010, acs_2015, acs_2020)
 
 # Save merged data
-write.csv(acs_income, file = paste0(proj_dir, "data/acs_med_income.csv"))
+write.csv(acs_income, file = file.path(proj_dir, "data/acs_med_income.csv"))
 
 
 # Merge income data with census tract geojson
-census_tracts_raw <- read_sf(paste0(proj_dir, "data/tract10.json"))
+census_tracts_raw <- read_sf(file.path(proj_dir, "data/tract10.json"))
 
 # Set correct CRS
 st_crs(census_tracts_raw) <- 2927
@@ -79,43 +78,23 @@ income_sf <- st_sf(tracts_income)
 
 
 # Write the geojson
-st_write(income_sf, paste0(proj_dir, "data/tract_income.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
+st_write(income_sf, file.path(proj_dir, "data/tract_income.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
 
-
-###
-# Prep Link station data
-###
-# Load station geometries
-stations_raw <- read_sf(paste0(proj_dir, "data/station_data.geojson"))
-
-colnames(stations_raw) <- tolower(colnames(stations_raw))
-
-link_stations <- stations_raw %>%
-  filter(segment!="TAC|Ballard")
-
-# Load station opening dates
-station_dates <- readxl::read_excel(paste0(proj_dir, "data/expansion_dates.xlsx"))
-
-
-# Merge station locations with opening dates
-# TODO - FIX STATION NAMES FOR MERGE
-stations <- left_join(station_dates, stations_raw, by="station") %>%
-  filter(!is.na(station))
 
 
 ###
-# Prep Link line data
+# Split Link station and line data into separate files
 ###
-lines_raw <- read_sf(paste0(proj_dir, "data/line_data.geojson"))
+stations_lines <- read_sf(file.path(proj_dir, "data/stations_lines.geojson"))
 
-colnames(lines_raw) <- tolower(colnames(lines_raw))
+stations <- stations_lines %>% filter(!is.na(station))
+st_write(stations, file.path(proj_dir, "data/link_stations.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
 
-lines <- lines_raw %>%
-  mutate(open_year = case_when(
-           descriptio=="Central Link" ~ 2009,
-           descriptio=="Airport Link" ~ 2009))
+lines <- stations_lines %>% filter(!is.na(line_number))
+st_write(lines, file.path(proj_dir, "data/link_lines.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
+
 
 ###
-# Average income of Census tracts with Link stations
+# Calculate average income by year
 ###
-income_sf
+
