@@ -89,19 +89,14 @@ map.addLayer({
 map.setFilter('link_routes_line', ['<=', ['number', ['get', 'open_year']], default_year]);
 
 
-// Add Census tracts layer
+// Add Census tracts layers
 
 map.addSource('census_tracts', {
         type: 'geojson',
-        data: './data/tract_income.geojson'
+        data: './data/census_tracts_treated.geojson'
     });
 
-// function loadDataForYear(year) {
-//     const style = map.getStyle();
-//     style.layers.find(({ id }) => id === "emissions").paint['fill-color']['property'] = 'total_' + year;
-//     map.setStyle(style);
-// }
-
+// fill layer
 map.addLayer({
         id: 'census_tracts_fill',
         type: 'fill',
@@ -130,6 +125,21 @@ map.addLayer({
         slot: 'middle' // middle slot in Mapbox Standard style
     });
 
+    // treated outline layer
+    map.addLayer({
+        id: 'census_tracts_line',
+        type: 'line',
+        source: 'census_tracts',
+        layout: {
+            'visibility': 'visible'
+        },
+        paint: {
+                'line-color': '#ffffff' 
+        },
+        slot: 'middle' // middle slot in Mapbox Standard style
+    });
+
+    map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], default_year]);
 
 
 
@@ -139,6 +149,7 @@ document.getElementById('slider').addEventListener('input', (event) => {
   // update the map
   map.setFilter('link_routes_line', ['<=', ['number', ['get', 'open_year']], year]);
   map.setFilter('station_markers', ['<=', ['number', ['get', 'open_year']], year]);
+  map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], year]);
 
   // update text in the UI
   document.getElementById('display_year').innerText = year;
@@ -179,41 +190,6 @@ map.addInteraction('station_markers_mouseleave_interaction', {
 
 });
 
-// map.scrollZoom.disable();
-
-// // create station status legend
-// deleted legend for now - added status to station popup instead 
-
-
-// const legend = document.getElementById('legend');
-
-
-// const color = map.getPaintProperty('station_markers', 'circle-color');
-// const item = document.createElement('div');
-// const key = document.createElement('span');
-// key.className = 'legend-key';
-// key.style.backgroundColor = color;
-
-// const value = document.createElement('span');
-// value.innerHTML = `${layer}`;
-// item.appendChild(key);
-// item.appendChild(value);
-// legend.appendChild(item);
-
-
-
-//////////
-// CREATE MAP HEADER
-//////////
-
-const header = document.createElement('div');
-header.className = 'header';
-header.innerHTML = `
-    <h1>Link Light Rail Stations</h1>
-    <p class="call-to-action">Click the markers to see each station's name and opening status.</p>
-`;
-
-document.body.appendChild(header);
 
 });
 
