@@ -5,13 +5,12 @@ mapboxgl.accessToken = 'pk.eyJ1IjoicnVieXN0ZWVkbGUiLCJhIjoiY21uaTJ1YnBkMDk0NDJxb
 // CREATE MAP
 ////////
 
-// set constant for center of map
-const seattle_ll = [-122.33935, 47.60774];
-
 // declare map options
 const mapOptions = {
-    zoom: 10, 
-    center: seattle_ll, 
+    zoom: 9, 
+    maxZoom: 11,
+    minZoom: 8,
+    center: [-122.33935, 47.60774], // set default center to downtown Seattle
     container: 'map-container',
     style: 'mapbox://styles/mapbox/standard',
     terrain: null,
@@ -102,6 +101,46 @@ map.addLayer({
         }
     });
 
+// Add Census tracts layer
+
+map.addSource('census_tracts', {
+        type: 'geojson',
+        data: './data/tract_income.geojson'
+    });
+
+// function loadDataForYear(year) {
+//     const style = map.getStyle();
+//     style.layers.find(({ id }) => id === "emissions").paint['fill-color']['property'] = 'total_' + year;
+//     map.setStyle(style);
+// }
+
+map.addLayer({
+        id: 'census_tracts_fill',
+        type: 'fill',
+        source: 'census_tracts',
+        layout: {
+            'visibility': 'visible'
+        },
+        paint: {
+            'fill-color': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'med_income'],
+                    0,
+                    '#E9ECF7',
+                    50000,
+                    '#B2C6ED',
+                    100000,
+                    '#81A9D6',
+                    150000,
+                    '#4C7A9F',
+                    200000,
+                    '#496781'
+                ],
+                'fill-opacity': 0.4
+        },
+        slot: 'middle' // middle slot in Mapbox Standard style
+    });
 
 // Add checkboxes to toggle which layers are visible
 
@@ -113,6 +152,11 @@ document.getElementById('station-toggle').addEventListener('change', (e) => {
 document.getElementById('line-toggle').addEventListener('change', (e) => {
     const visibility = e.target.checked ? 'visible' : 'none';
     map.setLayoutProperty('link_routes_line', 'visibility', visibility);
+});
+
+document.getElementById('income-toggle').addEventListener('change', (e) => {
+    const visibility = e.target.checked ? 'visible' : 'none';
+    map.setLayoutProperty('census_tracts_fill', 'visibility', visibility);
 });
 
 // Add popup with station name when station marker is clicked
@@ -151,6 +195,7 @@ map.addInteraction('station_markers_mouseleave_interaction', {
 
 });
 
+// map.scrollZoom.disable();
 
 // // create station status legend
 // deleted legend for now - added status to station popup instead 
