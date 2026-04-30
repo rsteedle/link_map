@@ -110,18 +110,13 @@ tracts <- read_sf(file.path(proj_dir, "data/tract_income.geojson"))
 
 # Transform to feet map type
 tracts_ft <- tracts %>%
-  st_transform(2927)
-
-stations <- stations %>%
-  mutate(open_2009 = ifelse(open_year<=2009,1,0),
-         open_2016 = ifelse(open_year<=2016,1,0), 
-         open_2021 = ifelse(open_year<=2021,1,0), 
-         open_2024 = ifelse(open_year<=2024,1,0), 
-         open_2025 = ifelse(open_year<=2025,1,0), 
-         open_2026 = ifelse(open_year<=2026,1,0))
+  st_transform(2927) %>%
+  mutate(treat_year = NA)
 
 # Create "treated" buffer zones and identify tracts within buffer zones for each expansion year 
 expansion_years <- unique(stations$open_year)
+
+expansion_years <- sort(expansion_years, decreasing = TRUE)
 
 for (y in expansion_years) {
 
@@ -136,13 +131,41 @@ for (y in expansion_years) {
     mutate(treated_sum = sum(across(starts_with("new_treated"))),
            treat_id = ifelse(treated_sum>0,1,0)) %>%
     select(-contains("treated"))
+    
+  tracts_ft <- tracts_ft %>%  
+    mutate(treat_year = ifelse(treat_id==1, y, treat_year))
   
-  colnames(tracts_ft) <- str_replace_all(colnames(tracts_ft), "treat_id", paste0("treated_", y))
+  # colnames(tracts_ft) <- str_replace_all(colnames(tracts_ft), "treat_id", paste0("treated_", y))
   
 }
 
+## Save tracts data with treat_year info 
+tracts_treated <- tracts_ft %>%
+  st_transform(4326) 
+
+st_write(tracts_treated, file.path(proj_dir, "data/census_tracts_treated.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
 
 
+## 
+# Calculate average median income by expansion period
+##
 
+exp_summ <- data.frame(year = expansion_years, med_income = NA)
 
+for (y in expansion_years) {
+  subset <- tracts_ft %>%
+    select(geo_id, treat_year, med_income) %>%
+    filter(treat_year<=y)  %>%
+    st_drop_geometry()
+  
+  summ <- subset %>%
+    ungroup() %>%
+    summarize(med_income = mean(med_income))
+  
+  exp_summ$med_income[exp_summ$year==y] <- summ[1,1]
+}
+
+exp_summ <- apply(exp_summ,2,as.numeric)
+
+write.csv(exp_summ, file = file.path(proj_dir, "data/average_income.csv"))
 
