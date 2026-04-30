@@ -143,29 +143,6 @@ document.getElementById('slider').addEventListener('input', (event) => {
   document.getElementById('display_year').innerText = year;
 });
 
-
-
-
-
-
-
-// Add checkboxes to toggle which layers are visible
-
-// document.getElementById('station-toggle').addEventListener('change', (e) => {
-//     const visibility = e.target.checked ? 'visible' : 'none';
-//     map.setLayoutProperty('station_markers', 'visibility', visibility);
-// });
-
-// document.getElementById('line-toggle').addEventListener('change', (e) => {
-//     const visibility = e.target.checked ? 'visible' : 'none';
-//     map.setLayoutProperty('link_routes_line', 'visibility', visibility);
-// });
-
-document.getElementById('income-toggle').addEventListener('change', (e) => {
-    const visibility = e.target.checked ? 'visible' : 'none';
-    map.setLayoutProperty('census_tracts_fill', 'visibility', visibility);
-});
-
 // Add popup with station name when station marker is clicked
 map.addInteraction('station_markers_click_interaction', {
     type: 'click',
