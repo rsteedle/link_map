@@ -98,3 +98,51 @@ st_write(lines, file.path(proj_dir, "data/link_lines.geojson"), driver = "GeoJSO
 # Calculate average income by year
 ###
 
+# Load station location and opening dates data
+stations <- read_sf(file.path(proj_dir, "data/link_stations.geojson"))
+
+# Transform to feet map type
+stations_ft <- stations %>%
+  st_transform(2927)
+
+# Load census tract data
+tracts <- read_sf(file.path(proj_dir, "data/tract_income.geojson"))
+
+# Transform to feet map type
+tracts_ft <- tracts %>%
+  st_transform(2927)
+
+stations <- stations %>%
+  mutate(open_2009 = ifelse(open_year<=2009,1,0),
+         open_2016 = ifelse(open_year<=2016,1,0), 
+         open_2021 = ifelse(open_year<=2021,1,0), 
+         open_2024 = ifelse(open_year<=2024,1,0), 
+         open_2025 = ifelse(open_year<=2025,1,0), 
+         open_2026 = ifelse(open_year<=2026,1,0))
+
+# Create "treated" buffer zones and identify tracts within buffer zones for each expansion year 
+expansion_years <- unique(stations$open_year)
+
+for (y in expansion_years) {
+
+  stations_buffer <- stations_ft %>%
+    filter(open_year<=y) %>%
+    st_buffer(dist = 2640)
+  
+  tracts_ft$new_treated = ifelse(st_intersects(tracts_ft, stations_buffer, sparse = F), 1, 0)
+  
+  tracts_ft <- tracts_ft %>%
+    rowwise() %>%
+    mutate(treated_sum = sum(across(starts_with("new_treated"))),
+           treat_id = ifelse(treated_sum>0,1,0)) %>%
+    select(-contains("treated"))
+  
+  colnames(tracts_ft) <- str_replace_all(colnames(tracts_ft), "treat_id", paste0("treated_", y))
+  
+}
+
+
+
+
+
+
