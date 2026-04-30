@@ -9,8 +9,9 @@ mapboxgl.accessToken = 'pk.eyJ1IjoicnVieXN0ZWVkbGUiLCJhIjoiY21uaTJ1YnBkMDk0NDJxb
 const mapOptions = {
     zoom: 10, 
     maxZoom: 11,
-    minZoom: 9,
+    minZoom: 8,
     center: [-122.33935, 47.60774], // set default center to downtown Seattle
+    maxBounds: [[ -122.624774, 47.127863],[-121.839252, 48.094376]],
     container: 'map-container',
     style: 'mapbox://styles/mapbox/standard',
     terrain: null,
