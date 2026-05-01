@@ -1,0 +1,55 @@
+---
+title: "Median income figures"
+output: pdf_document
+---
+
+
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+
+# Set directories
+proj_dir <- here::here()
+
+
+income <- read.csv(file.path(proj_dir, "data/average_income.csv"))
+
+```
+
+
+```{r}
+income_plot_all_years <- ggplot(aes(x = year, y = med_income), data = income) +
+  geom_point() +
+  geom_line() +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0,140000)) +
+  scale_x_continuous(limits = c(2009,2026)) +
+  theme_tufte()
+
+ggsave(income_plot_all_years, filename = file.path(proj_dir, "figures/income_plot_all_years.png"))
+
+```
+
+```{r}
+years <- 2009:2026
+
+for (y in years) {
+  
+  year_plot <- ggplot(data = income) +
+    geom_point(aes(x = year, y = med_income), 
+              data = . %>% filter(year <= y)) +
+    geom_line(aes(x = year, y = med_income), 
+              data = . %>% filter(year <= y)) +
+    scale_y_continuous(labels = scales::dollar_format(), limits = c(0,140000)) +
+    scale_x_continuous(limits = c(2009,2026)) +
+    theme_tufte()
+  
+  print(year_plot)
+  # ggsave(year_plot, filename = paste0(proj_dir, "/figures/income_plot_", y, ".png"))
+
+  
+}
+
+
+
+```

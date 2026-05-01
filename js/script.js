@@ -39,6 +39,7 @@ map.on('load', () => {
 
 // Set default year for data
 const default_year = 2009;
+const default_census_year = 2014;
 
 // Add station markers layer
 
@@ -125,34 +126,51 @@ map.addLayer({
         slot: 'middle' // middle slot in Mapbox Standard style
     });
 
-    // treated outline layer
-    map.addLayer({
-        id: 'census_tracts_line',
-        type: 'line',
-        source: 'census_tracts',
-        layout: {
-            'visibility': 'visible'
-        },
-        paint: {
-                'line-color': '#ffffff' 
-        },
-        slot: 'middle' // middle slot in Mapbox Standard style
-    });
+map.setFilter('census_tracts_fill', ['==', ['number', ['get', 'acs_year']], default_census_year]);
 
-    map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], default_year]);
+
+// treated outline layer
+map.addLayer({
+    id: 'census_tracts_line',
+    type: 'line',
+    source: 'census_tracts',
+    layout: {
+        'visibility': 'visible'
+    },
+    paint: {
+            'line-color': '#ffffff' 
+    },
+    slot: 'middle' // middle slot in Mapbox Standard style
+});
+
+map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], default_year]);
 
 
 
 // Add year slider interactivity 
 document.getElementById('slider').addEventListener('input', (event) => {
-  const year = parseInt(event.target.value);
-  // update the map
-  map.setFilter('link_routes_line', ['<=', ['number', ['get', 'open_year']], year]);
-  map.setFilter('station_markers', ['<=', ['number', ['get', 'open_year']], year]);
-  map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], year]);
 
-  // update text in the UI
-  document.getElementById('display_year').innerText = year;
+    // identify target year set by slider and corresponding year for census data
+    const year = parseInt(event.target.value);
+    let census_year = year;
+
+    if (year < 2010) {
+        census_year = 2010;
+    } else if (year > 2024) {
+        census_year = 2024;
+    }
+
+    // update the map
+    map.setFilter('link_routes_line', ['<=', ['number', ['get', 'open_year']], year]);
+    map.setFilter('station_markers', ['<=', ['number', ['get', 'open_year']], year]);
+    map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], year]);
+    map.setFilter('census_tracts_fill', ['==', ['number', ['get', 'acs_year']], census_year]);
+
+    // update the figure for the selected year
+    document.getElementById('year-figure').src = `figures/income_plot_${year}.png`;
+
+    // update text in the UI
+    document.getElementById('display_year').innerText = year;
 });
 
 // Add popup with station name when station marker is clicked
