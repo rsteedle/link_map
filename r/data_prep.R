@@ -8,47 +8,64 @@ library(sf)
 # Set directories
 proj_dir <- here::here()
 
+
+
+###
+# Split Link station and line data into separate files
+###
+stations_lines <- read_sf(file.path(proj_dir, "data/stations_lines.geojson"))
+
+stations <- stations_lines %>% filter(!is.na(station))
+st_write(stations, file.path(proj_dir, "data/link_stations.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
+
+lines <- stations_lines %>% filter(!is.na(line_number))
+st_write(lines, file.path(proj_dir, "data/link_lines.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
+
+
+
 ###
 # Census data median income layer
 ###
 
-# Load census data - median income by census tract in select counties Washington state for 2010, 2015, 2020
+# Load census data - median income by census tract in Washington state for 2010-2024
 
-# 2010 data
-raw_2010 <- read.csv(file.path(proj_dir, "data/acs_2010.csv"))
+# Start with 2010
+raw_2010 <- read.csv(file.path(proj_dir, "data/acs_data/ACSST5Y2010.S1903-Data.csv"))
 
 acs_2010 <- raw_2010 %>%
   rename(geo_id = GEO_ID,
          med_income = S1903_C02_001E) %>%
   select(geo_id, med_income) %>%
   mutate(med_income = as.numeric(med_income),
-         year = 2010) %>%
+         acs_year = 2010) %>%
   filter(!is.na(med_income))
 
-# 2015
-raw_2015 <- read.csv(file.path(proj_dir, "data/acs_2015.csv"))
+acs_income <-acs_2010
 
-acs_2015 <- raw_2015 %>%
-  rename(geo_id = GEO_ID,
-         med_income = S1903_C02_001E) %>%
-  select(geo_id, med_income) %>%
-  mutate(med_income = as.numeric(med_income),
-         year = 2015) %>%
-  filter(!is.na(med_income))
-
-# 2020
-raw_2020 <- read.csv(file.path(proj_dir, "data/acs_2020.csv"))
-
-acs_2020 <- raw_2020 %>%
-  rename(geo_id = GEO_ID,
-         med_income = S1903_C02_001E) %>%
-  select(geo_id, med_income) %>%
-  mutate(med_income = as.numeric(med_income),
-         year = 2020) %>%
-  filter(!is.na(med_income))
-
-# Combine years
-acs_income <- bind_rows(acs_2010, acs_2015, acs_2020)
+# Loop through rest of census years
+census_years <- 2011:2024
+  
+for (y in census_years) {
+  raw_acs <- read.csv(paste0(proj_dir, "/data/acs_data/ACSST5Y", y, ".S1903-Data.csv"))
+  
+  if (y<=2016){
+    raw_acs <- raw_acs %>%
+      rename(geo_id = GEO_ID,
+             med_income = S1903_C02_001E) # name of median income column changes from 2016 to 2017
+  }else{
+    raw_acs <- raw_acs %>%
+      rename(geo_id = GEO_ID,
+             med_income = S1903_C03_001E)
+  }
+  
+  acs_year_data <- raw_acs %>%
+    mutate(med_income = as.numeric(med_income), 
+           acs_year = y) %>%
+    filter(!is.na(med_income)) %>%
+    select(geo_id, med_income, acs_year)
+  
+  acs_income <- bind_rows(acs_income, acs_year_data)
+}
 
 # Save merged data
 write.csv(acs_income, file = file.path(proj_dir, "data/acs_med_income.csv"))
@@ -76,26 +93,13 @@ tracts_income <- inner_join(acs_income, census_tracts, by = "geo_id", multiple =
 income_sf <- st_sf(tracts_income)
 
 
-
 # Write the geojson
 st_write(income_sf, file.path(proj_dir, "data/tract_income.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
 
 
 
 ###
-# Split Link station and line data into separate files
-###
-stations_lines <- read_sf(file.path(proj_dir, "data/stations_lines.geojson"))
-
-stations <- stations_lines %>% filter(!is.na(station))
-st_write(stations, file.path(proj_dir, "data/link_stations.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
-
-lines <- stations_lines %>% filter(!is.na(line_number))
-st_write(lines, file.path(proj_dir, "data/link_lines.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
-
-
-###
-# Calculate average income by year
+# Identify treated tracts by year, calculate average income of treated
 ###
 
 # Load station location and opening dates data
@@ -131,6 +135,8 @@ for (y in expansion_years) {
     mutate(treated_sum = sum(across(starts_with("new_treated"))),
            treat_id = ifelse(treated_sum>0,1,0)) %>%
     select(-contains("treated"))
+  
+  ## TODO: add names of nearby stations
     
   tracts_ft <- tracts_ft %>%  
     mutate(treat_year = ifelse(treat_id==1, y, treat_year))
@@ -147,16 +153,26 @@ st_write(tracts_treated, file.path(proj_dir, "data/census_tracts_treated.geojson
 
 
 ## 
-# Calculate average median income by expansion period
+# Calculate average median income of treated tracts by year
 ##
+tracts_treated <- st_read(file.path(proj_dir, "data/census_tracts_treated.geojson"))
 
-exp_summ <- data.frame(year = expansion_years, med_income = NA)
+years <- 2026:2009
 
-for (y in expansion_years) {
-  subset <- tracts_ft %>%
-    select(geo_id, treat_year, med_income) %>%
+exp_summ <- data.frame(year = years, med_income = NA)
+
+for (y in years) {
+  
+  # only have 2010-2024 census data, so using 2010 data for 2009 and 2024 data for 2025, 2026
+  census_year <- ifelse(y>2024, 2024, y)
+  census_year <- ifelse(y<2010, 2010, census_year)
+  
+  subset <- tracts_treated %>%
+    select(geo_id, treat_year, med_income, acs_year) %>%
     filter(treat_year<=y)  %>%
+    filter(acs_year==census_year) %>%
     st_drop_geometry()
+  
   
   summ <- subset %>%
     ungroup() %>%
@@ -165,7 +181,7 @@ for (y in expansion_years) {
   exp_summ$med_income[exp_summ$year==y] <- summ[1,1]
 }
 
-exp_summ <- apply(exp_summ,2,as.numeric)
+exp_summ_csv <- apply(exp_summ,2,as.numeric)
 
-write.csv(exp_summ, file = file.path(proj_dir, "data/average_income.csv"))
+write.csv(exp_summ_csv, file = file.path(proj_dir, "data/average_income.csv"))
 
