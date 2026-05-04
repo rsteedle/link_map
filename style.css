@@ -2,7 +2,7 @@ body {
   margin: 0;
   padding: 0;
   font-size: 12px;
-  font-family: 'Lato', Helvetica, Arial, sans-serif;
+  font-family: 'Lato', Helvetica, sans-serif;
 }
 
 #map-container {
@@ -29,10 +29,12 @@ a {
   color: #2dc4b2;
 }
 
+
+/* console styling */
+
 #console {
   position: absolute;
   width: 30%;
-  height: 90%;
   margin: 10px;
   padding: 10px 20px;
   background-color: white;
@@ -67,12 +69,39 @@ a {
   font-size: 10px;
 }
 
+/* legend styling */
+#legend {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: white;
+  padding: 10px;
+  font-size: 12px;
+}
 
+.legend-item {
+    display: flex;
+    align-items: left;
+    margin-bottom: 8px;
+}
+
+.legend-circle {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    margin-right: 8px;
+    display: inline-block;
+}
+
+.legend-label {
+    font-size: 13px;
+    color: #555;
+}
 
 /* popup styling */
 
 .mapboxgl-popup-content{
-    font-family: 'Helvetica', sans-serif;
+    font-family: 'Lato', Helvetica, sans-serif;
     font-size: 12px;
 }
 

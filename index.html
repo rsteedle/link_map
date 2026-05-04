@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.css">
+    <link href='https://fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css'>
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.js"></script>
 
   </head>
@@ -28,9 +29,9 @@
           <div class="row labels">
             <div class="label">$0</div>
             <div class="label">$50,000</div>
-            <!-- <div class="label">$100,000</div> -->
+            <div class="label">$100,000</div>
             <div class="label">$150,000</div>
-            <!-- <div class="label">$200,000</div> -->
+            <div class="label">$200,000</div>
             <div class="label">$250,000+</div>
           </div>
         </div>
@@ -47,13 +48,25 @@
           />
         </div>
         <div class="session" id="figure-panel">
-          <h2>Figure</h2>
+          <h2>Average median income of census tracts served by Link Light Rail</h2>
           <img
             id="year-figure"
             src="figures/income_plot_2009.png"
-            alt="Income plot for all years"
             style="width:100%; height:auto; display:block; margin-top:1rem;"
           />
+        </div>
+    </div>
+
+    <!-- Link line legend -->
+    <div id="legend">
+        <h2>Link Light Rail Lines</h2>
+        <div class="legend-item">
+            <span class="legend-circle" style="background-color: #e6e605;"></span>
+            <span class="legend-label">Line 1</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-circle" style="background-color: #fbb400;"></span>
+            <span class="legend-label">Line 2</span>
         </div>
     </div>
 

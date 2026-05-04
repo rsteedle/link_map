@@ -10,8 +10,8 @@ const mapOptions = {
     zoom: 10, 
     maxZoom: 11,
     minZoom: 8,
-    center: [-122.33935, 47.60774], // set default center to downtown Seattle
-    maxBounds: [[ -122.624774, 47.127863],[-121.839252, 48.094376]],
+    center: [-122.36935, 47.60774], // set default center to downtown Seattle
+    maxBounds: [[ -124, 47],[-121, 49]],
     container: 'map-container',
     style: 'mapbox://styles/mapbox/standard',
     terrain: null,
@@ -57,7 +57,7 @@ map.addLayer({
         },
         paint: {
             'circle-radius': 5,
-            'circle-color': '#0e440a',
+            'circle-color': '#bbad17',
             'circle-opacity': 0.8
         }
     });
@@ -80,8 +80,8 @@ map.addLayer({
             'line-color': [
                 'match',
                 ['get', 'line_number'],
-                1, '#5b9452',
-                2, '#83dd73',
+                1, '#e6e605',
+                2, '#fbb400',
                     '#000000'],
             'line-width': 4
         }
@@ -121,7 +121,7 @@ map.addLayer({
                     200000,
                     '#496781'
                 ],
-                'fill-opacity': 0.4
+                'fill-opacity': 0.8
         },
         slot: 'middle' // middle slot in Mapbox Standard style
     });
@@ -189,10 +189,34 @@ map.addInteraction('station_markers_click_interaction', {
     }
 });
 
-// Change the cursor to a pointer when the mouse is over a POI.
+// Add popup with tract median income when census tract is clicked
+map.addInteraction('census_tracts_click_interaction', {
+    type: 'click',
+    target: { layerId: 'census_tracts_fill' },
+    handler: (e) => {
+        // Copy coordinates array.
+        const coordinates = e.feature.geometry.coordinates.slice();
+        const description = e.feature.properties.med_income;
+
+        new mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(`<strong>Median income: </strong> $${description.toLocaleString()}`)
+            .addTo(map);
+    }
+});
+
+// Change the cursor to a pointer when the mouse is over a POI - station marker or census tract
 map.addInteraction('station_markers_mouseenter_interaction', {
     type: 'mouseenter',
     target: { layerId: 'station_markers' },
+    handler: () => {
+        map.getCanvas().style.cursor = 'pointer';
+    }
+});
+
+map.addInteraction('tracts_mouseenter_interaction', {
+    type: 'mouseenter',
+    target: { layerId: 'census_tracts_fill' },
     handler: () => {
         map.getCanvas().style.cursor = 'pointer';
     }
@@ -202,6 +226,15 @@ map.addInteraction('station_markers_mouseenter_interaction', {
 map.addInteraction('station_markers_mouseleave_interaction', {
     type: 'mouseleave',
     target: { layerId: 'station_markers' },
+    handler: () => {
+        map.getCanvas().style.cursor = '';
+    }
+
+});
+
+map.addInteraction('tracts_mouseleave_interaction', {
+    type: 'mouseleave',
+    target: { layerId: 'census_tracts_fill' },
     handler: () => {
         map.getCanvas().style.cursor = '';
     }
