@@ -51,14 +51,17 @@ for (y in census_years) {
   if (y<=2016){
     raw_acs <- raw_acs %>%
       rename(geo_id = GEO_ID,
-             med_income = S1903_C02_001E) # name of median income column changes from 2016 to 2017
+             med_income = S1903_C02_001E) %>% # name of median income column changes from 2016 to 2017
+      select(geo_id, med_income)  
   }else{
     raw_acs <- raw_acs %>%
       rename(geo_id = GEO_ID,
-             med_income = S1903_C03_001E)
+             med_income = S1903_C03_001E) %>%
+      select(geo_id, med_income)
   }
   
   acs_year_data <- raw_acs %>%
+    mutate(med_income = ifelse(med_income=="250,000+", "250000", med_income)) %>%
     mutate(med_income = as.numeric(med_income), 
            acs_year = y) %>%
     filter(!is.na(med_income)) %>%
@@ -70,28 +73,53 @@ for (y in census_years) {
 # Save merged data
 write.csv(acs_income, file = file.path(proj_dir, "data/acs_med_income.csv"))
 
-
+###
 # Merge income data with census tract geojson
-census_tracts_raw <- read_sf(file.path(proj_dir, "data/tract10.json"))
+###
+acs_income <- read.csv(file.path(proj_dir, "data/acs_med_income.csv"))
+
+census_tracts_raw_2010 <- read_sf(file.path(proj_dir, "data/tract10.json"))
+census_tracts_raw_2020 <- read_sf(file.path(proj_dir, "data/tract20.json"))
 
 # Set correct CRS
-st_crs(census_tracts_raw) <- 2927
+st_crs(census_tracts_raw_2010) <- 2927
+st_crs(census_tracts_raw_2020) <- 2927
 
 # Transform to WGS84
-census_tracts<- st_transform(census_tracts_raw, 4326)
+census_tracts_2010 <- st_transform(census_tracts_raw_2010, 4326)
+census_tracts_2020 <- st_transform(census_tracts_raw_2020, 4326)
 
-census_tracts <- census_tracts %>%
-  filter(POP10>0) %>%
+census_tracts_2010 <- census_tracts_2010 %>%
   rename(geo_id = GEOID10) %>%
   select(geo_id, geometry)
 
-acs_income <- acs_income %>%
+census_tracts_2020 <- census_tracts_2020 %>%
+  rename(geo_id = GEOID20) %>%
+  select(geo_id, geometry)
+
+acs_income_2010 <- acs_income %>%
+  filter(acs_year<2020) %>%
   mutate(geo_id = str_remove(geo_id, "1400000US"))
 
-tracts_income <- inner_join(acs_income, census_tracts, by = "geo_id", multiple = "all")
+acs_income_2020 <- acs_income %>%
+  filter(acs_year>=2020) %>%
+  mutate(geo_id = str_remove(geo_id, "1400000US"))
+
+tracts_income_2010 <- inner_join(acs_income_2010, census_tracts_2010, by = "geo_id", multiple = "all")
+tracts_income_2020 <- inner_join(acs_income_2020, census_tracts_2020, by = "geo_id", multiple = "all")
+
+tracts_income <- bind_rows(tracts_income_2010, tracts_income_2020)
 
 income_sf <- st_sf(tracts_income)
 
+# 
+# check <- full_join(acs_income_2020, census_tracts_2020, by = "geo_id", multiple = "all") 
+# 
+# acs_tracts <- unique(acs_income_2020$geo_id)
+# geo_tracts <- unique(census_tracts_2020$geo_id)
+# 
+# check <- check %>%
+#   filter(! geo_id %in% acs_tracts)
 
 # Write the geojson
 st_write(income_sf, file.path(proj_dir, "data/tract_income.geojson"), driver = "GeoJSON", delete_dsn = TRUE)
@@ -122,6 +150,8 @@ expansion_years <- unique(stations$open_year)
 
 expansion_years <- sort(expansion_years, decreasing = TRUE)
 
+station_names <- stations$station
+
 for (y in expansion_years) {
 
   stations_buffer <- stations_ft %>%
@@ -133,15 +163,24 @@ for (y in expansion_years) {
   tracts_ft <- tracts_ft %>%
     rowwise() %>%
     mutate(treated_sum = sum(across(starts_with("new_treated"))),
-           treat_id = ifelse(treated_sum>0,1,0)) %>%
-    select(-contains("treated"))
-  
-  ## TODO: add names of nearby stations
+           treat_id = ifelse(treated_sum>0,1,0))
     
-  tracts_ft <- tracts_ft %>%  
-    mutate(treat_year = ifelse(treat_id==1, y, treat_year))
+  ## TODO: add names of nearby stations
+  # station_inds <- tracts_ft %>% 
+  #   st_drop_geometry() %>%
+  #   select(contains("treated"), geo_id) 
+  # 
+  # station_inds$names <- station_names[station_inds$new_treated]
+  # 
+  # tracts_ft$station_inds <- unlist(tracts_ft[,])
+  #   mutate(station_inds = unlist(starts_with("treated")))
+  # 
+  # # colnames(tracts_ft) <- str_replace_all(colnames(tracts_ft), "treat_id", paste0("treated_", y))
   
-  # colnames(tracts_ft) <- str_replace_all(colnames(tracts_ft), "treat_id", paste0("treated_", y))
+  
+    tracts_ft <- tracts_ft %>%  
+      mutate(treat_year = ifelse(treat_id==1, y, treat_year)) %>%
+      select(-contains("treated"))
   
 }
 
