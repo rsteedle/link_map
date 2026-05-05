@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.css">
+    <link href='https://fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css'>
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.20.0/mapbox-gl.js"></script>
 
   </head>
@@ -12,25 +13,64 @@
   <body>
     <div id="map-container"></div>
 
-    <!-- Controls Container -->
-    <div class="controls-container">
-    
-      <!-- Time slider -->
-      <div class="control-panel" id="sliderbar">
-        <h2>Year: <label id="display_year">2009</label></h2>
-        <input
-          id="slider"
-          class="row"
-          type="range"
-          min="2009"
-          max="2026"
-          step="1"
-          value="2009"
-        />
+  
+    <!-- Console/Controls Container -->
+    <div id="console">
+      <h1>Link light rail expansion 2009-2026 and median household income</h1>
+
+
+        <!-- Year slider bar -->
+      <div class = "slidecontainer">
+        <label>2009<span id="demo" display=inline float=left></span></label>
+
+        <input type="range" min="2009" max="2026" value="2009" class="slider" id="myRange">
+        <label>2026<span id="demo" display=inline float=right></span></label>
+
       </div>
+        
+      <!-- Income legend -->
+      
+      <div class="session">
+        <h2>Median household income</h2>
+        <div class="row colors"></div>
+        <div class="row labels">
+          <div class="label">$0</div>
+          <div class="label">$50,000</div>
+          <div class="label">$100,000</div>
+          <div class="label">$150,000</div>
+          <div class="label">$200,000</div>
+          <div class="label">$250,000+</div>
+        </div>
+      </div>
+
+        <!-- Figure panel -->
+        <div class="session" id="figure-panel">
+          <h2>Average median income of census tracts served by Link light rail</h2>
+
+          <img
+            id="year-figure"
+            src="figures/income_plot_2009.png"
+            style="width:100%; height:auto; display:block; margin-top:1rem;"
+          />
+          <p> <em>Notes:</em>  </br>Average median income is calculated as the mean of the median household incomes of all census tracts served by Link. Census tracts are considered "served" if they are within a 0.5-mile radius of any Link station.</p>
+          <p> <em>Data:</em> </br><a href="https://data.census.gov/table?q=S1903:+Median+Income+in+the+Past+12+Months+(in+2024+Inflation-Adjusted+Dollars)&g=040XX00US53,53$1400000">American Community Survey (ACS) 5-year estimates</a></p>
+        </div>
+
     </div>
 
-  <script src="data/station_data.json"></script>
+    <!-- Link line legend -->
+    <div id="legend">
+        <h2>Link Light Rail Lines</h2>
+        <div class="legend-item">
+            <span class="legend-circle" style="background-color: #e6e605;"></span>
+            <span class="legend-label">Line 1</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-circle" style="background-color: #fbb400;"></span>
+            <span class="legend-label">Line 2</span>
+        </div>
+    </div>
+
   <script src="js/script.js"> </script>
 
   </body>

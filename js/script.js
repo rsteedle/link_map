@@ -10,8 +10,8 @@ const mapOptions = {
     zoom: 10, 
     maxZoom: 11,
     minZoom: 8,
-    center: [-122.33935, 47.60774], // set default center to downtown Seattle
-    maxBounds: [[ -122.624774, 47.127863],[-121.839252, 48.094376]],
+    center: [-122.36935, 47.60774], // set default center to downtown Seattle
+    maxBounds: [[ -124, 47],[-121, 49]],
     container: 'map-container',
     style: 'mapbox://styles/mapbox/standard',
     terrain: null,
@@ -39,6 +39,7 @@ map.on('load', () => {
 
 // Set default year for data
 const default_year = 2009;
+const default_census_year = 2014;
 
 // Add station markers layer
 
@@ -56,7 +57,7 @@ map.addLayer({
         },
         paint: {
             'circle-radius': 5,
-            'circle-color': '#0e440a',
+            'circle-color': '#bbad17',
             'circle-opacity': 0.8
         }
     });
@@ -79,8 +80,8 @@ map.addLayer({
             'line-color': [
                 'match',
                 ['get', 'line_number'],
-                1, '#5b9452',
-                2, '#83dd73',
+                1, '#e6e605',
+                2, '#fbb400',
                     '#000000'],
             'line-width': 4
         }
@@ -89,19 +90,14 @@ map.addLayer({
 map.setFilter('link_routes_line', ['<=', ['number', ['get', 'open_year']], default_year]);
 
 
-// Add Census tracts layer
+// Add Census tracts layers
 
 map.addSource('census_tracts', {
         type: 'geojson',
-        data: './data/tract_income.geojson'
+        data: './data/census_tracts_treated.geojson'
     });
 
-// function loadDataForYear(year) {
-//     const style = map.getStyle();
-//     style.layers.find(({ id }) => id === "emissions").paint['fill-color']['property'] = 'total_' + year;
-//     map.setStyle(style);
-// }
-
+// fill layer
 map.addLayer({
         id: 'census_tracts_fill',
         type: 'fill',
@@ -125,23 +121,56 @@ map.addLayer({
                     200000,
                     '#496781'
                 ],
-                'fill-opacity': 0.4
+                'fill-opacity': 0.8
         },
         slot: 'middle' // middle slot in Mapbox Standard style
     });
 
+map.setFilter('census_tracts_fill', ['==', ['number', ['get', 'acs_year']], default_census_year]);
+
+
+// treated outline layer
+map.addLayer({
+    id: 'census_tracts_line',
+    type: 'line',
+    source: 'census_tracts',
+    layout: {
+        'visibility': 'visible'
+    },
+    paint: {
+            'line-color': '#ffffff' 
+    },
+    slot: 'middle' // middle slot in Mapbox Standard style
+});
+
+map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], default_year]);
 
 
 
 // Add year slider interactivity 
-document.getElementById('slider').addEventListener('input', (event) => {
-  const year = parseInt(event.target.value);
-  // update the map
-  map.setFilter('link_routes_line', ['<=', ['number', ['get', 'open_year']], year]);
-  map.setFilter('station_markers', ['<=', ['number', ['get', 'open_year']], year]);
+document.getElementById('myRange').addEventListener('input', (event) => {
 
-  // update text in the UI
-  document.getElementById('display_year').innerText = year;
+    // identify target year set by slider and corresponding year for census data
+    const year = parseInt(event.target.value);
+    let census_year = year;
+
+    if (year < 2010) {
+        census_year = 2010;
+    } else if (year > 2024) {
+        census_year = 2024;
+    }
+
+    // update the map
+    map.setFilter('link_routes_line', ['<=', ['number', ['get', 'open_year']], year]);
+    map.setFilter('station_markers', ['<=', ['number', ['get', 'open_year']], year]);
+    map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], year]);
+    map.setFilter('census_tracts_fill', ['==', ['number', ['get', 'acs_year']], census_year]);
+
+    // update the figure for the selected year
+    document.getElementById('year-figure').src = `figures/income_plot_${year}.png`;
+
+    // update text in the UI
+    document.getElementById('display_year').innerText = year;
 });
 
 // Add popup with station name when station marker is clicked
@@ -160,10 +189,41 @@ map.addInteraction('station_markers_click_interaction', {
     }
 });
 
-// Change the cursor to a pointer when the mouse is over a POI.
+// Add popup with tract median income when census tract is clicked
+map.addInteraction('census_tracts_click_interaction', {
+    type: 'click',
+    target: { layerId: 'census_tracts_fill' },
+    handler: (e) => {
+        // Copy coordinates array.
+        const coordinates = e.feature.geometry.coordinates.slice();
+        const med_income = e.feature.properties.med_income;
+
+        let displayIncome;
+        if (med_income == 250000) {
+            displayIncome = '$250,000+';
+        } else {
+            displayIncome = `$${med_income.toLocaleString()}`;
+        }
+
+        new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(`<strong>Median income: </strong> ${displayIncome}`)
+            .addTo(map);
+    }
+});
+
+// Change the cursor to a pointer when the mouse is over a POI - station marker or census tract
 map.addInteraction('station_markers_mouseenter_interaction', {
     type: 'mouseenter',
     target: { layerId: 'station_markers' },
+    handler: () => {
+        map.getCanvas().style.cursor = 'pointer';
+    }
+});
+
+map.addInteraction('tracts_mouseenter_interaction', {
+    type: 'mouseenter',
+    target: { layerId: 'census_tracts_fill' },
     handler: () => {
         map.getCanvas().style.cursor = 'pointer';
     }
@@ -179,41 +239,15 @@ map.addInteraction('station_markers_mouseleave_interaction', {
 
 });
 
-// map.scrollZoom.disable();
+map.addInteraction('tracts_mouseleave_interaction', {
+    type: 'mouseleave',
+    target: { layerId: 'census_tracts_fill' },
+    handler: () => {
+        map.getCanvas().style.cursor = '';
+    }
 
-// // create station status legend
-// deleted legend for now - added status to station popup instead 
+});
 
-
-// const legend = document.getElementById('legend');
-
-
-// const color = map.getPaintProperty('station_markers', 'circle-color');
-// const item = document.createElement('div');
-// const key = document.createElement('span');
-// key.className = 'legend-key';
-// key.style.backgroundColor = color;
-
-// const value = document.createElement('span');
-// value.innerHTML = `${layer}`;
-// item.appendChild(key);
-// item.appendChild(value);
-// legend.appendChild(item);
-
-
-
-//////////
-// CREATE MAP HEADER
-//////////
-
-const header = document.createElement('div');
-header.className = 'header';
-header.innerHTML = `
-    <h1>Link Light Rail Stations</h1>
-    <p class="call-to-action">Click the markers to see each station's name and opening status.</p>
-`;
-
-document.body.appendChild(header);
 
 });
 

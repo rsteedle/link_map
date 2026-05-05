@@ -1,0 +1,71 @@
+---
+title: "Median income figures"
+output: pdf_document
+---
+
+
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+library(showtext)
+
+# Set directories
+proj_dir <- here::here()
+
+
+income <- read.csv(file.path(proj_dir, "data/average_income.csv"))
+
+
+# add Lato font
+font_add_google("Lato", "Lato")
+showtext_auto()
+```
+
+
+```{r}
+ggplot(aes(x = year, y = med_income), data = income) +
+  geom_point() +
+  geom_line() +
+  scale_y_continuous(labels = scales::dollar_format(), limits = c(0,140000)) +
+  scale_x_continuous(limits = c(2009,2026)) +
+  theme_tufte(base_family="Lato") 
+
+ggsave(income_plot_all_years, filename = file.path(proj_dir, "figures/income_plot_all_years.png"))
+
+```
+
+```{r}
+years <- 2009:2026
+
+income <- income %>%
+  mutate(income_tho = med_income/1000)
+
+for (y in years) {
+  
+  year_plot <- ggplot(data = income) +
+    geom_point(aes(x = year, y = income_tho), 
+              data = . %>% filter(year <= y), color = "blue", size = 2) +
+    geom_line(aes(x = year, y = income_tho), 
+              data = . %>% filter(year <= y), color = "blue") +
+    scale_y_continuous(labels = paste0("$",c(50, 100, 150), "k"), 
+                       limits = c(35,150),
+                       breaks = c(50, 100, 150)) +
+    scale_x_continuous(limits = c(2009,2026)) +
+    labs(y = "",
+         x = "") +
+    theme_tufte(base_family="Lato") +
+    theme(axis.text = element_text(size = 16, face = "bold"),
+          axis.ticks = element_blank())
+  
+  print(year_plot)
+  
+  
+  ggsave(year_plot, filename = paste0(proj_dir, "/figures/income_plot_", y, ".png"),
+         width = 3, height = 2, units = "in")
+
+}
+
+
+
+```
