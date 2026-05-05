@@ -148,7 +148,11 @@ map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], de
 
 
 // Add year slider interactivity 
-document.getElementById('myRange').addEventListener('input', (event) => {
+const slider = document.getElementById('myRange');
+const displayYearEl = document.getElementById('display_year');
+
+if (slider) {
+  slider.addEventListener('input', (event) => {
 
     // identify target year set by slider and corresponding year for census data
     const year = parseInt(event.target.value);
@@ -170,8 +174,13 @@ document.getElementById('myRange').addEventListener('input', (event) => {
     document.getElementById('year-figure').src = `figures/income_plot_${year}.png`;
 
     // update text in the UI
-    document.getElementById('display_year').innerText = year;
-});
+    if (displayYearEl) {
+      displayYearEl.innerText = year;
+    }
+  });
+} else {
+  console.warn('Slider element not found: #myRange');
+}
 
 // Add popup with station name when station marker is clicked
 map.addInteraction('station_markers_click_interaction', {
