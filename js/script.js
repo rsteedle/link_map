@@ -148,7 +148,7 @@ map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], de
 
 
 // Add year slider interactivity 
-document.getElementById('slider').addEventListener('input', (event) => {
+document.getElementById('myRange').addEventListener('input', (event) => {
 
     // identify target year set by slider and corresponding year for census data
     const year = parseInt(event.target.value);
@@ -196,11 +196,18 @@ map.addInteraction('census_tracts_click_interaction', {
     handler: (e) => {
         // Copy coordinates array.
         const coordinates = e.feature.geometry.coordinates.slice();
-        const description = e.feature.properties.med_income;
+        const med_income = e.feature.properties.med_income;
+
+        let displayIncome;
+        if (med_income == 250000) {
+            displayIncome = '$250,000+';
+        } else {
+            displayIncome = `$${med_income.toLocaleString()}`;
+        }
 
         new mapboxgl.Popup()
-            .setLngLat(coordinates)
-            .setHTML(`<strong>Median income: </strong> $${description.toLocaleString()}`)
+            .setLngLat(e.lngLat)
+            .setHTML(`<strong>Median income: </strong> ${displayIncome}`)
             .addTo(map);
     }
 });
