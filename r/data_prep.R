@@ -34,13 +34,12 @@ raw_2010 <- read.csv(file.path(proj_dir, "data/acs_data/ACSST5Y2010.S1903-Data.c
 
 acs_2010 <- raw_2010 %>%
   rename(geo_id = GEO_ID,
-         med_income = S1903_C02_001E) %>%
-  select(geo_id, med_income) %>%
-  mutate(med_income = as.numeric(med_income),
-         acs_year = 2010) %>%
-  filter(!is.na(med_income))
+         med_income_2010 = S1903_C02_001E) %>%
+  select(geo_id, med_income_2010) %>%
+  mutate(med_income_2010 = as.numeric(med_income_2010)) %>%
+  filter(!is.na(med_income_2010))
 
-acs_income <-acs_2010
+acs_income <- acs_2010
 
 # Loop through rest of census years
 census_years <- 2011:2024
@@ -53,6 +52,8 @@ for (y in census_years) {
       rename(geo_id = GEO_ID,
              med_income = S1903_C02_001E) %>% # name of median income column changes from 2016 to 2017
       select(geo_id, med_income)  
+  
+    
   }else{
     raw_acs <- raw_acs %>%
       rename(geo_id = GEO_ID,
@@ -62,12 +63,13 @@ for (y in census_years) {
   
   acs_year_data <- raw_acs %>%
     mutate(med_income = ifelse(med_income=="250,000+", "250000", med_income)) %>%
-    mutate(med_income = as.numeric(med_income), 
-           acs_year = y) %>%
+    mutate(med_income = as.numeric(med_income)) %>%
     filter(!is.na(med_income)) %>%
-    select(geo_id, med_income, acs_year)
+    select(geo_id, med_income)
   
-  acs_income <- bind_rows(acs_income, acs_year_data)
+  colnames(acs_year_data) <- c("geo_id", paste0("med_income_", y))
+  
+  acs_income <- full_join(acs_income, acs_year_data, by = "geo_id")
 }
 
 # Save merged data
@@ -76,10 +78,11 @@ write.csv(acs_income, file = file.path(proj_dir, "data/acs_med_income.csv"))
 ###
 # Merge income data with census tract geojson
 ###
-acs_income <- read.csv(file.path(proj_dir, "data/acs_med_income.csv"))
+acs_income <- read.csv(file.path(proj_dir, "data/acs_med_income.csv")) %>%
+  select(-X)
 
-census_tracts_raw_2010 <- read_sf(file.path(proj_dir, "data/tract10.json"))
-census_tracts_raw_2020 <- read_sf(file.path(proj_dir, "data/tract20.json"))
+census_tracts_raw_2010 <- read_sf(file.path(proj_dir, "data/tract10_minified.json"))
+census_tracts_raw_2020 <- read_sf(file.path(proj_dir, "data/tract20_minified.json"))
 
 # Set correct CRS
 st_crs(census_tracts_raw_2010) <- 2927
@@ -98,12 +101,14 @@ census_tracts_2020 <- census_tracts_2020 %>%
   select(geo_id, geometry)
 
 acs_income_2010 <- acs_income %>%
-  filter(acs_year<2020) %>%
-  mutate(geo_id = str_remove(geo_id, "1400000US"))
+  mutate(geo_id = str_remove(geo_id, "1400000US")) %>%
+  select(-contains("202")) %>%
+  mutate(tract_year = 2010)
 
 acs_income_2020 <- acs_income %>%
-  filter(acs_year>=2020) %>%
-  mutate(geo_id = str_remove(geo_id, "1400000US"))
+  mutate(geo_id = str_remove(geo_id, "1400000US")) %>%
+  select(-contains("201")) %>%
+  mutate(tract_year = 2020)
 
 tracts_income_2010 <- inner_join(acs_income_2010, census_tracts_2010, by = "geo_id", multiple = "all")
 tracts_income_2020 <- inner_join(acs_income_2020, census_tracts_2020, by = "geo_id", multiple = "all")
@@ -192,7 +197,7 @@ st_write(tracts_treated, file.path(proj_dir, "data/census_tracts_treated.geojson
 
 
 ## 
-# Calculate average median income of treated tracts by year
+# Calculate average median income of treated tracts by year TODO FIX THIS
 ##
 tracts_treated <- st_read(file.path(proj_dir, "data/census_tracts_treated.geojson"))
 
@@ -207,10 +212,16 @@ for (y in years) {
   census_year <- ifelse(y<2010, 2010, census_year)
   
   subset <- tracts_treated %>%
-    select(geo_id, treat_year, med_income, acs_year) %>%
-    filter(treat_year<=y)  %>%
-    filter(acs_year==census_year) %>%
-    st_drop_geometry()
+    st_drop_geometry() %>%
+    filter(treat_year <= y) %>%
+    ungroup()
+  
+  year_avg <- mean(subset$med_income_{y})
+  
+    # select(geo_id, treat_year, med_income, acs_year) %>%
+    # filter(treat_year<=y)  %>%
+    # filter(acs_year==census_year) %>%
+    # 
   
   
   summ <- subset %>%
