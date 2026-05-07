@@ -39,7 +39,43 @@ map.on('load', () => {
 
 // Set default year for data
 const default_year = 2009;
-const default_census_year = 2014;
+
+const clampCensusYear = (year) => {
+    if (year < 2010) return 2010;
+    if (year > 2024) return 2024;
+    return year;
+};
+
+const getMedIncomeField = (year) => `med_income_${year}`;
+
+const getTractYearForYear = (year) => {
+    if (year < 2020) return 2010;
+    return 2020;
+};
+
+const getIncomeFillColor = (year) => [
+    'case',
+    ['==', ['typeof', ['get', getMedIncomeField(year)]], 'null'],
+    '#D3D3D3',  // light gray for missing values
+    [
+        'interpolate',
+        ['linear'],
+        ['number', ['get', getMedIncomeField(year)]],
+        0,
+        '#E9ECF7',
+        50000,
+        '#B2C6ED',
+        100000,
+        '#81A9D6',
+        150000,
+        '#4C7A9F',
+        200000,
+        '#496781'
+    ]
+];
+
+let selectedCensusYear = clampCensusYear(default_year);
+let selectedTractYear = getTractYearForYear(default_year);
 
 // Add station markers layer
 
@@ -106,27 +142,13 @@ map.addLayer({
             'visibility': 'visible'
         },
         paint: {
-            'fill-color': [
-                    'interpolate',
-                    ['linear'],
-                    ['get', 'med_income'],
-                    0,
-                    '#E9ECF7',
-                    50000,
-                    '#B2C6ED',
-                    100000,
-                    '#81A9D6',
-                    150000,
-                    '#4C7A9F',
-                    200000,
-                    '#496781'
-                ],
-                'fill-opacity': 0.8
+            'fill-color': getIncomeFillColor(selectedCensusYear),
+            'fill-opacity': 0.8
         },
         slot: 'middle' // middle slot in Mapbox Standard style
     });
 
-map.setFilter('census_tracts_fill', ['==', ['number', ['get', 'acs_year']], default_census_year]);
+map.setFilter('census_tracts_fill', ['==', ['number', ['get', 'tract_year']], selectedTractYear]);
 
 
 // treated outline layer
@@ -143,35 +165,42 @@ map.addLayer({
     slot: 'middle' // middle slot in Mapbox Standard style
 });
 
-map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], default_year]);
+map.setFilter('census_tracts_line', ['all', ['<=', ['number', ['get', 'treat_year']], default_year], ['==', ['number', ['get', 'tract_year']], selectedTractYear]]);
 
 
 
 // Add year slider interactivity 
-document.getElementById('myRange').addEventListener('input', (event) => {
+const slider = document.getElementById('myRange');
+const displayYearEl = document.getElementById('display_year');
+
+if (slider) {
+  slider.addEventListener('input', (event) => {
 
     // identify target year set by slider and corresponding year for census data
     const year = parseInt(event.target.value);
-    let census_year = year;
-
-    if (year < 2010) {
-        census_year = 2010;
-    } else if (year > 2024) {
-        census_year = 2024;
-    }
+    const census_year = clampCensusYear(year);
+    const tract_year = getTractYearForYear(year);
 
     // update the map
     map.setFilter('link_routes_line', ['<=', ['number', ['get', 'open_year']], year]);
     map.setFilter('station_markers', ['<=', ['number', ['get', 'open_year']], year]);
-    map.setFilter('census_tracts_line', ['<=', ['number', ['get', 'treat_year']], year]);
-    map.setFilter('census_tracts_fill', ['==', ['number', ['get', 'acs_year']], census_year]);
+    map.setFilter('census_tracts_line', ['all', ['<=', ['number', ['get', 'treat_year']], year], ['==', ['number', ['get', 'tract_year']], tract_year]]);
+    map.setFilter('census_tracts_fill', ['==', ['number', ['get', 'tract_year']], tract_year]);
+    selectedCensusYear = census_year;
+    selectedTractYear = tract_year;
+    map.setPaintProperty('census_tracts_fill', 'fill-color', getIncomeFillColor(census_year));
 
     // update the figure for the selected year
     document.getElementById('year-figure').src = `figures/income_plot_${year}.png`;
 
     // update text in the UI
-    document.getElementById('display_year').innerText = year;
-});
+    if (displayYearEl) {
+      displayYearEl.innerText = year;
+    }
+  });
+} else {
+  console.warn('Slider element not found: #myRange');
+}
 
 // Add popup with station name when station marker is clicked
 map.addInteraction('station_markers_click_interaction', {
@@ -196,7 +225,7 @@ map.addInteraction('census_tracts_click_interaction', {
     handler: (e) => {
         // Copy coordinates array.
         const coordinates = e.feature.geometry.coordinates.slice();
-        const med_income = e.feature.properties.med_income;
+        const med_income = e.feature.properties[getMedIncomeField(selectedCensusYear)] ?? e.feature.properties.med_income;
 
         let displayIncome;
         if (med_income == 250000) {
