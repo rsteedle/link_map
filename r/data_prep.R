@@ -214,24 +214,14 @@ for (y in years) {
   subset <- tracts_treated %>%
     st_drop_geometry() %>%
     filter(treat_year <= y) %>%
-    ungroup()
-  
-  year_avg <- mean(subset$med_income_{y})
-  
-    # select(geo_id, treat_year, med_income, acs_year) %>%
-    # filter(treat_year<=y)  %>%
-    # filter(acs_year==census_year) %>%
-    # 
-  
-  
-  summ <- subset %>%
     ungroup() %>%
-    summarize(med_income = mean(med_income))
+    select(as.name(paste0("med_income_",census_year)))
   
-  exp_summ$med_income[exp_summ$year==y] <- summ[1,1]
+  year_avg <- mean(subset[,1], na.rm = T)
+  
+  exp_summ$med_income[exp_summ$year==y] <- year_avg
 }
 
-exp_summ_csv <- apply(exp_summ,2,as.numeric)
 
-write.csv(exp_summ_csv, file = file.path(proj_dir, "data/average_income.csv"))
+write.csv(exp_summ, file = file.path(proj_dir, "data/average_income.csv"))
 
